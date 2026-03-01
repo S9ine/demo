@@ -138,12 +138,6 @@ function getSheetData(sheet) {
 // ส่วนที่ 3: ฟังก์ชันบันทึกข้อมูล (Create/Update)
 // ==========================================
 
-function saveMember(data) {
-  const db = getDatabase();
-  db.members.appendRow([data.id, data.name, data.cid, data.phone, JSON.stringify(data.address), new Date()]);
-  return { success: true };
-}
-
 function savePlot(data) {
   const db = getDatabase();
   const sheet = db.plots;
@@ -191,6 +185,64 @@ function savePlot(data) {
 
 function savePayment(data) {
   const db = getDatabase();
-  db.payments.appendRow([data.id, data.date, data.memberId, data.plotId, data.type, data.year, data.amount, data.note, new Date()]);
+  // ใส่เครื่องหมาย ' นำหน้า ID ใบเสร็จ และ PlotID เพื่อป้องกัน Sheets แปลงเป็นตัวเลข
+  db.payments.appendRow([
+    "'" + data.id, 
+    data.date, 
+    data.memberId, 
+    "'" + data.plotId, 
+    data.type, 
+    data.year, 
+    data.amount, 
+    data.note, 
+    new Date()
+  ]);
   return { success: true };
+}
+
+// แก้ไขฟังก์ชัน saveMember ให้รองรับการ Update
+function saveMember(data) {
+  const db = getDatabase();
+  const sheet = db.members;
+  const dataRange = sheet.getDataRange().getValues();
+  let rowIndex = -1;
+
+  for (let i = 1; i < dataRange.length; i++) {
+    if (dataRange[i][0] === data.id) {
+      rowIndex = i + 1;
+      break;
+    }
+  }
+
+  // แก้ไขตรงนี้: ใส่ "'" นำหน้าข้อมูลเพื่อบังคับเป็นข้อความ (Plain Text)
+  const rowData = [
+    data.id, 
+    data.name, 
+    "'" + data.cid,   // ใส่เครื่องหมาย ' นำหน้า CID
+    "'" + data.phone, // ใส่เครื่องหมาย ' นำหน้าเบอร์โทรศัพท์
+    JSON.stringify(data.address), 
+    new Date()
+  ];
+
+  if (rowIndex > -1) {
+    sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
+  } else {
+    sheet.appendRow(rowData);
+  }
+  return { success: true };
+}
+
+// เพิ่มฟังก์ชันสำหรับลบสมาชิก
+function deleteMember(id) {
+  const db = getDatabase();
+  const sheet = db.members;
+  const dataRange = sheet.getDataRange().getValues();
+  
+  for (let i = 1; i < dataRange.length; i++) {
+    if (dataRange[i][0] === id) {
+      sheet.deleteRow(i + 1);
+      return { success: true };
+    }
+  }
+  return { success: false, message: "ไม่พบข้อมูลสมาชิก" };
 }
