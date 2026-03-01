@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบบริหารจัดการสมาคมสุสาน</title>
-    <!-- Dependencies -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -77,28 +76,22 @@
         };
 
         function App() {
-            // State สำหรับระบบ Login & Session
             const [sessionChecking, setSessionChecking] = useState(true);
             const [isLoggedIn, setIsLoggedIn] = useState(false);
             const [user, setUser] = useState(null);
-            
             const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
             const [activeMenu, setActiveMenu] = useState('dashboard');
             const [showModal, setShowModal] = useState(null);
-            
-            // UI States
             const [toasts, setToasts] = useState([]);
             const [loading, setLoading] = useState(false);
             const [searchTerm, setSearchTerm] = useState("");
             const [dataLoaded, setDataLoaded] = useState(false);
 
-            // Data States
             const [orgInfo, setOrgInfo] = useState(INITIAL_ORG_INFO);
             const [members, setMembers] = useState([]);
             const [plots, setPlots] = useState([]);
             const [payments, setPayments] = useState([]);
 
-            // --- Utilities ---
             const addToast = (message, type = 'success') => {
                 const id = Date.now();
                 setToasts(prev => [...prev, { id, message, type }]);
@@ -111,13 +104,11 @@
                         google.script.run
                             .withSuccessHandler(resolve).withFailureHandler(reject)[funcName](...args);
                     } else {
-                        // หากไม่ได้รันบน GAS จะส่งค่าพิเศษกลับไปเพื่อใช้งานโหมดจำลอง (Mock)
                         resolve({ _mockEnv: true, funcName, args });
                     }
                 });
             };
 
-            // --- ตรวจสอบ Session ตอนโหลดหน้าเว็บครั้งแรก ---
             useEffect(() => {
                 const checkSession = async () => {
                     const token = localStorage.getItem('cms_session_token');
@@ -127,7 +118,6 @@
                             if (res && res._mockEnv) {
                                 setUser({ name: 'ผู้ดูแลระบบ (โหมดทดสอบ)' });
                                 setIsLoggedIn(true);
-                                addToast('โหมดทดสอบ: คืนค่าเซสชันสำเร็จ', 'warning');
                             } else if (res && res.valid) {
                                 setUser(res.user);
                                 setIsLoggedIn(true);
@@ -135,7 +125,6 @@
                                 localStorage.removeItem('cms_session_token');
                             }
                         } catch (err) {
-                            console.error(err);
                             localStorage.removeItem('cms_session_token');
                         }
                     }
@@ -144,26 +133,23 @@
                 checkSession();
             }, []);
 
-            // --- ดึงข้อมูลหลัง Login สำเร็จ ---
             useEffect(() => {
                 if (isLoggedIn && !dataLoaded && !sessionChecking) {
                     setLoading(true);
                     runGAS('getInitialData')
                         .then(data => {
                             if (data && data._mockEnv) {
-                                setMembers([{ id: 'M-001', name: 'สมชาย ใจดี (Mock)', cid: '1234567890123', phone: '081-222-3333', address: { no: '1/1', sub: 'บ้านหมี่', dist: 'บ้านหมี่', prov: 'ลพบุรี', zip: '15110' } }]);
-                                setPlots([{ id: 'P-A01', type: 'หลุมเดี่ยว', row: 1, col: 1, status: 'occupied', relativeId: 'M-001', deceasedName: 'สมใจ ใจดี (Mock)', deathDate: '2023-10-10', expiryDate: '2053-10-10', autoRenew: false, image: null }]);
+                                setMembers([{ id: 'M-001', name: 'ทดสอบ ระบบ', cid: '1234567890123', phone: '0812223333', address: { no: '1/1', sub: 'บ้านหมี่', dist: 'บ้านหมี่', prov: 'ลพบุรี', zip: '15110' } }]);
+                                setPlots([{ id: 'P-A01', type: 'หลุมเดี่ยว', row: 1, col: 1, status: 'occupied', relativeId: 'M-001', deceasedName: 'สมใจ ใจดี', deathDate: '2023-10-10', expiryDate: '2053-10-10', autoRenew: false, image: null }]);
                             } else if (data) {
                                 if (data.members) setMembers(data.members);
                                 if (data.plots) setPlots(data.plots);
                                 if (data.payments) setPayments(data.payments);
-                                addToast('โหลดข้อมูลสำเร็จ', 'success');
                             }
                             setDataLoaded(true);
                             setLoading(false);
                         })
                         .catch(err => {
-                            console.error("Error fetching initial data:", err);
                             addToast('เกิดข้อผิดพลาดในการโหลดข้อมูล', 'error');
                             setDataLoaded(true);
                             setLoading(false);
@@ -190,22 +176,18 @@
                 });
             };
 
-            // --- ฟังก์ชันเข้าสู่ระบบ ---
             const handleLogin = async (e) => {
                 e.preventDefault();
                 const username = e.target.username.value.trim();
                 const password = e.target.password.value.trim();
-                
                 setLoading(true);
                 try {
                     const res = await runGAS('loginUser', username, password);
-                    
                     if (res && res._mockEnv) {
                         if (username === 'admin' && password === '1234') {
-                            localStorage.setItem('cms_session_token', 'mock_token_12345');
+                            localStorage.setItem('cms_session_token', 'mock_token');
                             setUser({ name: 'Administrator (Mock)' });
                             setIsLoggedIn(true);
-                            addToast('เข้าสู่ระบบสำเร็จ (โหมดจำลอง)', 'success');
                         } else {
                             addToast('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง (ลอง admin / 1234)', 'error');
                         }
@@ -215,10 +197,9 @@
                         setIsLoggedIn(true);
                         addToast(`ยินดีต้อนรับคุณ ${res.user.name}`, 'success');
                     } else {
-                        addToast(res.message || 'รหัสไม่ถูกต้อง (หากเพิ่งติดตั้ง กรุณารัน setupDatabase ใน GAS ก่อน)', 'error');
+                        addToast(res.message || 'รหัสไม่ถูกต้อง', 'error');
                     }
                 } catch(err) {
-                    console.error(err);
                     addToast('เกิดข้อผิดพลาดในการเชื่อมต่อระบบ', 'error');
                 } finally {
                     setLoading(false);
@@ -229,32 +210,36 @@
                 const token = localStorage.getItem('cms_session_token');
                 setLoading(true);
                 if (token) {
-                    try { await runGAS('logoutUser', token); } catch(e) { console.error(e); }
+                    try { await runGAS('logoutUser', token); } catch(e) {}
                 }
                 localStorage.removeItem('cms_session_token');
                 setIsLoggedIn(false);
                 setUser(null);
                 setDataLoaded(false);
                 setLoading(false);
-                addToast('ออกจากระบบสำเร็จ', 'info');
             };
 
-            // --- CRUD Operations ---
             const handleAddMember = async (e) => {
                 e.preventDefault();
                 const formData = new FormData(e.target);
+                const editingData = showModal?.data;
+                
                 const data = {
+                    id: editingData ? editingData.id : `M-${String(members.length + 1).padStart(3, '0')}`,
                     name: formData.get('name'), cid: formData.get('cid'), phone: formData.get('phone'),
                     address: { no: formData.get('no'), sub: formData.get('sub'), dist: formData.get('dist'), prov: formData.get('prov'), zip: formData.get('zip') }
                 };
+                
                 setLoading(true);
                 try {
-                    const newId = `M-${String(members.length + 1).padStart(3, '0')}`;
-                    const newMember = { ...data, id: newId };
-                    const res = await runGAS('saveMember', newMember);
-                    setMembers(prev => [...prev, newMember]);
+                    await runGAS('saveMember', data);
+                    if (editingData) {
+                        setMembers(prev => prev.map(m => m.id === data.id ? data : m));
+                    } else {
+                        setMembers(prev => [...prev, data]);
+                    }
                     setShowModal(null);
-                    addToast('บันทึกข้อมูลสมาชิกสำเร็จ');
+                    addToast(editingData ? 'แก้ไขข้อมูลสำเร็จ' : 'บันทึกข้อมูลสมาชิกสำเร็จ');
                 } catch(err) { addToast('เกิดข้อผิดพลาดในการบันทึก', 'error'); } 
                 finally { setLoading(false); }
             };
@@ -305,7 +290,6 @@
                 finally { setLoading(false); }
             };
 
-            // --- Views ---
             const DashboardView = () => {
                 const stats = [
                     { label: 'สมาชิกทั้งหมด', value: members.length, color: 'blue', icon: 'users' },
@@ -380,7 +364,22 @@
                                         {filteredMembers.map(m => (
                                             <tr key={m.id} className="hover:bg-slate-50">
                                                 <td className="px-6 py-4 font-medium">{m.id}</td><td className="px-6 py-4 font-semibold">{m.name}</td><td className="px-6 py-4">{m.phone}</td><td className="px-6 py-4 text-xs text-slate-500">{`${m.address.no} ต.${m.address.sub} อ.${m.address.dist} จ.${m.address.prov}`}</td>
-                                                <td className="px-6 py-4"><div className="flex space-x-2"><button className="p-1 hover:text-blue-600"><Icon name="edit" size={16}/></button><button onClick={()=>{setMembers(members.filter(x=>x.id!==m.id)); addToast('ลบสำเร็จ','info');}} className="p-1 hover:text-red-600"><Icon name="trash" size={16}/></button></div></td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex space-x-2">
+                                                        <button onClick={() => setShowModal({ type: 'member', data: m })} className="p-1 hover:text-blue-600"><Icon name="edit" size={16}/></button>
+                                                        <button onClick={async () => {
+                                                            if (confirm(`ยืนยันการลบคุณ ${m.name}?`)) {
+                                                                setLoading(true);
+                                                                try {
+                                                                    await runGAS('deleteMember', m.id);
+                                                                    setMembers(members.filter(x => x.id !== m.id));
+                                                                    addToast('ลบข้อมูลสำเร็จ', 'info');
+                                                                } catch(e) { addToast('เกิดข้อผิดพลาด', 'error'); } 
+                                                                finally { setLoading(false); }
+                                                            }
+                                                        }} className="p-1 hover:text-red-600"><Icon name="trash" size={16}/></button>
+                                                    </div>
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -546,40 +545,86 @@
                 );
             };
 
-            // --- Modals ---
-            const MemberModal = () => (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                    <div className="bg-white w-full max-w-2xl rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-200">
-                        <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                            <h3 className="font-bold text-slate-800">ลงทะเบียนสมาชิก / ญาติผู้ติดต่อ</h3>
-                            <button onClick={() => setShowModal(null)} className="p-1 hover:bg-slate-200 rounded"><Icon name="x"/></button>
-                        </div>
-                        <div className="p-6 overflow-y-auto max-h-[80vh]">
-                            <form className="space-y-6" onSubmit={handleAddMember}>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="col-span-2 md:col-span-1"><label className="block text-xs font-bold text-slate-500 mb-1">ชื่อ-นามสกุล</label><input name="name" type="text" required className="w-full p-2.5 border rounded-lg" /></div>
-                                    <div className="col-span-2 md:col-span-1"><label className="block text-xs font-bold text-slate-500 mb-1">เลขบัตรประชาชน</label><input name="cid" type="text" maxLength="13" className="w-full p-2.5 border rounded-lg" /></div>
-                                    <div className="col-span-2 md:col-span-1"><label className="block text-xs font-bold text-slate-500 mb-1">เบอร์โทรศัพท์</label><input name="phone" type="tel" required className="w-full p-2.5 border rounded-lg" /></div>
-                                </div>
-                                <div className="p-4 bg-slate-50 rounded-lg space-y-3">
-                                    <h4 className="text-xs font-bold text-slate-400">ข้อมูลที่อยู่</h4>
-                                    <div className="grid grid-cols-3 gap-3">
-                                        <div className="col-span-3 md:col-span-1"><input name="no" type="text" required className="w-full p-2 border rounded-lg text-sm" placeholder="เลขที่/หมู่" /></div>
-                                        <div className="col-span-3 md:col-span-1"><input name="sub" type="text" required className="w-full p-2 border rounded-lg text-sm" placeholder="ตำบล" /></div>
-                                        <div className="col-span-3 md:col-span-1"><input name="dist" type="text" required className="w-full p-2 border rounded-lg text-sm" placeholder="อำเภอ" /></div>
-                                        <div className="col-span-2"><input name="prov" type="text" required className="w-full p-2 border rounded-lg text-sm" placeholder="จังหวัด" /></div>
-                                        <div><input name="zip" type="text" required className="w-full p-2 border rounded-lg text-sm" placeholder="รหัสไปรษณีย์" /></div>
-                                    </div>
-                                </div>
-                                <div className="flex justify-end space-x-3 pt-4">
-                                    <button type="button" onClick={() => setShowModal(null)} className="px-6 py-2.5 border rounded-lg text-slate-600 font-medium">ยกเลิก</button>
-                                    <button type="submit" className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700">บันทึกข้อมูลสมาชิก</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
+const MemberModal = () => {
+    const editData = showModal?.data;
+    // กรองข้อมูลการชำระเงินเฉพาะของสมาชิกคนนี้
+    const memberPayments = editData ? payments.filter(p => p.memberId === editData.id) : [];
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white w-full max-w-2xl rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-200">
+                <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                    <h3 className="font-bold text-slate-800">{editData ? `แก้ไขข้อมูล: ${editData.id}` : 'ลงทะเบียนสมาชิกใหม่'}</h3>
+                    <button onClick={() => setShowModal(null)} className="p-1 hover:bg-slate-200 rounded"><Icon name="x"/></button>
                 </div>
-            );
+                <div className="p-6 overflow-y-auto max-h-[85vh]">
+                    <form className="space-y-6" onSubmit={handleAddMember}>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="col-span-2 md:col-span-1"><label className="block text-xs font-bold text-slate-500 mb-1">ชื่อ-นามสกุล</label><input name="name" defaultValue={editData?.name} type="text" required className="w-full p-2.5 border rounded-lg" /></div>
+                            <div className="col-span-2 md:col-span-1"><label className="block text-xs font-bold text-slate-500 mb-1">เลขบัตรประชาชน</label><input name="cid" defaultValue={editData?.cid} type="text" maxLength="13" className="w-full p-2.5 border rounded-lg" /></div>
+                            <div className="col-span-2 md:col-span-1"><label className="block text-xs font-bold text-slate-500 mb-1">เบอร์โทรศัพท์</label><input name="phone" defaultValue={editData?.phone} type="tel" required className="w-full p-2.5 border rounded-lg" /></div>
+                        </div>
+
+                        <div className="p-4 bg-slate-50 rounded-lg space-y-3">
+                            <h4 className="text-xs font-bold text-slate-400">ข้อมูลที่อยู่</h4>
+                            <div className="grid grid-cols-3 gap-3">
+                                <div className="col-span-3 md:col-span-1"><input name="no" defaultValue={editData?.address?.no} type="text" className="w-full p-2 border rounded-lg text-sm" placeholder="เลขที่/หมู่" /></div>
+                                <div className="col-span-3 md:col-span-1"><input name="sub" defaultValue={editData?.address?.sub} type="text" className="w-full p-2 border rounded-lg text-sm" placeholder="ตำบล" /></div>
+                                <div className="col-span-3 md:col-span-1"><input name="dist" defaultValue={editData?.address?.dist} type="text" className="w-full p-2 border rounded-lg text-sm" placeholder="อำเภอ" /></div>
+                                <div className="col-span-2"><input name="prov" defaultValue={editData?.address?.prov} type="text" className="w-full p-2 border rounded-lg text-sm" placeholder="จังหวัด" /></div>
+                                <div><input name="zip" defaultValue={editData?.address?.zip} type="text" className="w-full p-2 border rounded-lg text-sm" placeholder="รหัสไปรษณีย์" /></div>
+                            </div>
+                        </div>
+
+                        {/* --- ส่วนที่เพิ่มใหม่: ข้อมูลการเก็บเงิน --- */}
+                        {editData && (
+                            <div className="mt-8 pt-6 border-t border-slate-100">
+                                <h4 className="text-sm font-bold text-slate-800 mb-4 flex items-center">
+                                    <Icon name="credit-card" size={16} className="mr-2 text-blue-600" />
+                                    ประวัติการชำระเงินล่าสุด
+                                </h4>
+                                {memberPayments.length > 0 ? (
+                                    <div className="overflow-hidden rounded-lg border border-slate-200">
+                                        <table className="w-full text-left text-xs">
+                                            <thead className="bg-slate-50 text-slate-500 font-bold">
+                                                <tr>
+                                                    <th className="px-4 py-2">วันที่</th>
+                                                    <th className="px-4 py-2">รายการ</th>
+                                                    <th className="px-4 py-2 text-right">จำนวนเงิน</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {memberPayments.slice(0, 5).map(p => (
+                                                    <tr key={p.id} className="hover:bg-slate-50">
+                                                        <td className="px-4 py-2">{p.date}</td>
+                                                        <td className="px-4 py-2">{p.type} ({p.year})</td>
+                                                        <td className="px-4 py-2 text-right font-bold text-blue-600">{Number(p.amount).toLocaleString()} บาท</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-6 bg-slate-50 rounded-lg border border-dashed border-slate-200">
+                                        <p className="text-xs text-slate-400">ยังไม่มีประวัติการชำระเงินของสมาชิกรายนี้</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        {/* ------------------------------------- */}
+
+                        <div className="flex justify-end space-x-3 pt-4">
+                            <button type="button" onClick={() => setShowModal(null)} className="px-6 py-2.5 border rounded-lg text-slate-600 font-medium">ยกเลิก</button>
+                            <button type="submit" className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700">
+                                {editData ? 'บันทึกการแก้ไข' : 'บันทึกข้อมูลสมาชิก'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    );
+};
 
             const PlotModal = () => {
                 const { r, c } = showModal;
@@ -649,57 +694,78 @@
                 );
             };
 
-            const PaymentModal = () => {
-                const [selectedMember, setSelectedMember] = useState("");
-                const availablePlots = plots.filter(p => p.relativeId === selectedMember);
+const PaymentModal = () => {
+    const [selectedMember, setSelectedMember] = useState("");
+    const [selectedPlot, setSelectedPlot] = useState("");
+    const [paymentMethod, setPaymentMethod] = useState("เงินสด"); // เพิ่มสถานะวิธีชำระเงิน
+    
+    const availablePlots = plots.filter(p => p.relativeId === selectedMember);
 
-                return (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                        <div className="bg-white w-full max-w-lg rounded-xl shadow-xl overflow-hidden animate-in zoom-in duration-200">
-                            <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                                <h3 className="font-bold text-slate-800">รับชำระเงิน</h3>
-                                <button onClick={() => setShowModal(null)} className="p-1 hover:bg-slate-200 rounded"><Icon name="x"/></button>
-                            </div>
-                            <form className="p-6 space-y-4" onSubmit={handleAddPayment}>
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white w-full max-w-lg rounded-xl shadow-xl overflow-hidden animate-in zoom-in duration-200">
+                <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                    <h3 className="font-bold text-slate-800">รับชำระเงิน / ออกใบเสร็จ</h3>
+                    <button onClick={() => setShowModal(null)} className="p-1 hover:bg-slate-200 rounded"><Icon name="x"/></button>
+                </div>
+                <form className="p-6 space-y-4" onSubmit={handleAddPayment}>
+                    <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1">1. ค้นหาสมาชิก / ผู้ชำระ</label>
+                        <select name="memberId" required className="w-full p-2.5 border rounded-lg" value={selectedMember} onChange={(e) => setSelectedMember(e.target.value)}>
+                            <option value="">-- เลือกสมาชิก --</option>
+                            {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                        </select>
+                    </div>
+
+                    {selectedMember && (
+                        <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                            <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 mb-1">1. ค้นหาสมาชิก / ผู้ชำระ</label>
-                                    <select name="memberId" required className="w-full p-2.5 border rounded-lg" value={selectedMember} onChange={(e) => setSelectedMember(e.target.value)}>
-                                        <option value="">-- เลือกสมาชิก --</option>
-                                        {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">2. เลือกพิกัดหลุม</label>
+                                    <select name="plotId" required className="w-full p-2.5 border rounded-lg" value={selectedPlot} onChange={(e) => setSelectedPlot(e.target.value)}>
+                                        <option value="">-- เลือกพื้นที่ --</option>
+                                        {availablePlots.length > 0 ? availablePlots.map(p => <option key={p.id} value={p.id}>{p.id}</option>) : <option disabled>ไม่พบพื้นที่</option>}
                                     </select>
                                 </div>
-                                {selectedMember && (
-                                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-xs font-bold text-slate-500 mb-1">2. เลือกพิกัดหลุม</label>
-                                                <select name="plotId" required className="w-full p-2.5 border rounded-lg">
-                                                    {availablePlots.length > 0 ? availablePlots.map(p => <option key={p.id} value={p.id}>{p.id}</option>) : <option disabled>ไม่พบพื้นที่</option>}
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-bold text-slate-500 mb-1">3. รายการค่าใช้จ่าย</label>
-                                                <select name="feeType" className="w-full p-2.5 border rounded-lg">
-                                                    <option>ค่าบำรุงรักษารายปี</option><option>ค่าทำความสะอาด</option><option>เงินบริจาค</option>
-                                                </select>
-                                            </div>
-                                            <div><label className="block text-xs font-bold text-slate-500 mb-1">4. ปี พ.ศ.</label><input name="year" type="number" defaultValue={new Date().getFullYear() + 543} className="w-full p-2.5 border rounded-lg" /></div>
-                                            <div><label className="block text-xs font-bold text-slate-500 mb-1">5. จำนวนเงิน (บาท)</label><input name="amount" type="number" required className="w-full p-2.5 border rounded-lg text-right font-bold text-blue-600" /></div>
-                                        </div>
-                                        <div><label className="block text-xs font-bold text-slate-500 mb-1">หมายเหตุ</label><input name="note" type="text" className="w-full p-2.5 border rounded-lg" /></div>
-                                    </div>
-                                )}
-                                <div className="flex justify-end space-x-3 pt-6">
-                                    <button type="button" onClick={() => setShowModal(null)} className="px-6 py-2 text-slate-500">ยกเลิก</button>
-                                    <button disabled={!selectedMember} type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700">บันทึกและออกใบเสร็จ</button>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">3. ช่องทางการชำระ</label>
+                                    <select name="method" className="w-full p-2.5 border rounded-lg" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+                                        <option value="เงินสด">เงินสด</option>
+                                        <option value="เงินโอน">เงินโอน / PromptPay</option>
+                                    </select>
                                 </div>
-                            </form>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">4. รายการค่าใช้จ่าย</label>
+                                    <select name="feeType" className="w-full p-2.5 border rounded-lg">
+                                        <option>ค่าบำรุงรักษารายปี</option>
+                                        <option>ค่าทำความสะอาด</option>
+                                        <option>เงินบริจาค</option>
+                                        <option>อื่นๆ</option>
+                                    </select>
+                                </div>
+                                <div><label className="block text-xs font-bold text-slate-500 mb-1">5. ปี พ.ศ.</label><input name="year" type="number" defaultValue={new Date().getFullYear() + 543} className="w-full p-2.5 border rounded-lg" /></div>
+                                <div className="col-span-2">
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">6. จำนวนเงิน (บาท)</label>
+                                    <input name="amount" type="number" required min="1" className="w-full p-3 border rounded-lg text-right font-bold text-blue-600 text-xl bg-blue-50" placeholder="0.00" />
+                                </div>
+                            </div>
+                            <div><label className="block text-xs font-bold text-slate-500 mb-1">หมายเหตุ</label><input name="note" type="text" className="w-full p-2.5 border rounded-lg" placeholder="ระบุรายละเอียดเพิ่มเติม..." /></div>
                         </div>
-                    </div>
-                );
-            };
+                    )}
 
-            // --- Layout Rendering ---
+                    <div className="flex justify-end space-x-3 pt-6 border-t border-slate-100">
+                        <button type="button" onClick={() => setShowModal(null)} className="px-6 py-2 text-slate-500 font-medium">ยกเลิก</button>
+                        <button disabled={!selectedMember} type="submit" className="px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 flex items-center">
+                            <Icon name="save" size={18} className="mr-2" />
+                            บันทึกและออกใบเสร็จ
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};  
+
             if (sessionChecking) {
                 return (
                     <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4">
@@ -818,7 +884,7 @@
                         </div>
                     </main>
 
-                    {showModal === 'member' && <MemberModal />}
+                    {(showModal === 'member' || showModal?.type === 'member') && <MemberModal />}
                     {showModal?.type === 'plot' && <PlotModal />}
                     {showModal === 'payment' && <PaymentModal />}
                 </div>
